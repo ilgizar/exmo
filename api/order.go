@@ -2,6 +2,7 @@ package api
 
 import (
     "fmt"
+    "strconv"
 )
 
 type OrderResultStruct struct {
@@ -46,13 +47,15 @@ type OrderBookStruct struct {
 
 type OrderBooksStruct map[string]OrderBookStruct
 
+var OpenTypes = []string{"buy", "sell", "market_buy", "market_sell", "market_buy_total", "market_sell_total"}
+
 
 func Open(pair string, quantity, price float64, type_name string) OrderResultStruct {
     return orderResult(Query("order_create", Params{"pair": pair, "quantity": fmt.Sprintf("%f", quantity), "price": fmt.Sprintf("%f", price), "type": type_name}, true))
 }
 
-func Cancel(id int) OrderResultStruct {
-    return orderResult(Query("order_cancel", Params{"order_id": string(id)}, true))
+func Cancel(id interface{}) OrderResultStruct {
+    return orderResult(Query("order_cancel", Params{"order_id": fmt.Sprintf("%v", id)}, true))
 }
 
 func Orders() OrdersStruct {
@@ -75,14 +78,14 @@ func OrderBook(pair string, limit int) OrderBooksStruct {
 
             order := OrderBookStruct{}
 
-            order.Ask.Quantity = interface2float(v["ask_quantity"])
-            order.Ask.Amount   = interface2float(v["ask_amount"])
-            order.Ask.Top      = interface2float(v["ask_top"])
+            order.Ask.Quantity = Interface2Float(v["ask_quantity"])
+            order.Ask.Amount   = Interface2Float(v["ask_amount"])
+            order.Ask.Top      = Interface2Float(v["ask_top"])
             order.Ask.Glass    = ab2slice(v["ask"])
 
-            order.Bid.Quantity = interface2float(v["bid_quantity"])
-            order.Bid.Amount   = interface2float(v["bid_amount"])
-            order.Bid.Top      = interface2float(v["bid_top"])
+            order.Bid.Quantity = Interface2Float(v["bid_quantity"])
+            order.Bid.Amount   = Interface2Float(v["bid_amount"])
+            order.Bid.Top      = Interface2Float(v["bid_top"])
             order.Bid.Glass    = ab2slice(v["bid"])
 
             orders[pair] = order
@@ -98,7 +101,7 @@ func orderResult(resp Response, err error) OrderResultStruct {
         res.Result      = resp["result"].(bool)
         res.Error       = resp["error"].(string)
         if val, ok := resp["order_id"]; ok {
-            res.OrderID = interface2int(val)
+            res.OrderID = Interface2Int(val)
         }
     } else {
         res.Error = err.Error()
@@ -108,7 +111,7 @@ func orderResult(resp Response, err error) OrderResultStruct {
 }
 
 func orderList(opened bool, resp Response, err error) OrdersStruct {
-    var orders OrdersStruct
+    orders := make(OrdersStruct)
     if err == nil {
         for pair, val := range resp {
             var lots OrderSlice
@@ -116,18 +119,18 @@ func orderList(opened bool, resp Response, err error) OrdersStruct {
                 t := item.(map[string]interface{})
                 var lot OrderStruct
 
-                lot.OrderID  = interface2int(t["order_id"])
+                lot.OrderID  = Interface2Int(t["order_id"])
                 if opened {
-                    lot.Date = interface2int(t["created"])
+                    lot.Date = Interface2Int(t["created"])
                     lot.Type = t["type"].(string)
                 } else {
-                    lot.Date = interface2int(t["date"])
+                    lot.Date = Interface2Int(t["date"])
                     lot.Type = t["order_type"].(string)
                 }
-                lot.Pair     = t["pair"].(string)
-                lot.Quantity = t["quantity"].(float64)
-                lot.Price    = t["price"].(float64)
-                lot.Amount   = t["amount"].(float64)
+                lot.Pair        = t["pair"].(string)
+                lot.Quantity, _ = strconv.ParseFloat(t["quantity"].(string), 64)
+                lot.Price, _    = strconv.ParseFloat(t["price"].(string), 64)
+                lot.Amount, _   = strconv.ParseFloat(t["amount"].(string), 64)
 
                 lots = append(lots, lot)
             }
@@ -145,9 +148,9 @@ func ab2slice(value interface{}) GlassesSlice {
         v := val.([]interface{})
 
         ab := GlassStruct{}
-        ab.Quantity = interface2float(v[0])
-        ab.Amount   = interface2float(v[1])
-        ab.Price    = interface2float(v[2])
+        ab.Quantity = Interface2Float(v[0])
+        ab.Amount   = Interface2Float(v[1])
+        ab.Price    = Interface2Float(v[2])
 
         result = append(result, ab)
     }

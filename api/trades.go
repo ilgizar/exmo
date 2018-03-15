@@ -1,5 +1,9 @@
 package api
 
+import (
+    "strconv"
+)
+
 type TradeStruct struct {
     TradeID  int
     Date     int
@@ -72,16 +76,16 @@ func trade2struct(val interface{}) TradeSlice {
         t := trade.(map[string]interface{})
         var lot TradeStruct
 
-        lot.TradeID = interface2int(t["trade_id"])
-        lot.Date = interface2int(t["date"])
+        lot.TradeID = Interface2Int(t["trade_id"])
+        lot.Date = Interface2Int(t["date"])
         lot.Type = t["type"].(string)
-        lot.Quantity = interface2float(t["quantity"])
-        lot.Amount = interface2float(t["amount"])
+        lot.Quantity = Interface2Float(t["quantity"])
+        lot.Amount = Interface2Float(t["amount"])
 
         if _, ok := t["order_id"]; ok {
             lot.Pair = t["pair"].(string)
-            lot.OrderID = interface2int(t["order_id"])
-            lot.Price = t["price"].(float64)
+            lot.OrderID = Interface2Int(t["order_id"])
+            lot.Price, _ = strconv.ParseFloat(t["price"].(string), 64)
         }
 
         lots = append(lots, lot)
